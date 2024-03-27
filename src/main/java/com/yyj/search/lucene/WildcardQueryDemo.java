@@ -14,7 +14,7 @@ public class WildcardQueryDemo {
     private static final String INDEX_DIR = "D:\\workspace\\data\\lucene";
 
     public static void main(String[] args) throws Exception {
-        searchIndex("token", "*00000000000000451cc1f3e314f48943f56d1de917b81a16678618548797335711*");
+        searchIndex("token", "*pBD3RcNh*");
     }
 
     private static void searchIndex(String field, String searchText) throws Exception {

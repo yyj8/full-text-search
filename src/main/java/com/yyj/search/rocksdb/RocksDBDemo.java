@@ -22,39 +22,52 @@ public class RocksDBDemo {
         final Options options = new Options()
                 .setCreateIfMissing(true)
                 .setCompressionType(CompressionType.ZSTD_COMPRESSION)
-                .setAllowMmapReads(true)
-                .setAllowMmapWrites(true);
+//                .setAllowMmapReads(true)
+//                .setAllowMmapWrites(true)
+                .setUseDirectIoForFlushAndCompaction(true)
+                .setWriteBufferSize(1024 * 1024 * 50);
 
         try {
             final RocksDB db = RocksDB.open(options, DATA_DIR);
             long start = System.currentTimeMillis();
-            put(db, 100000000);
+            put(db, 100000000, 100000);
             long end = System.currentTimeMillis();
             System.out.println("写入完成，耗时：" + (end - start));
-//            get(db, 1000000);
+            get(db, 100000000);
             db.close();
         } catch (RocksDBException e) {
             e.printStackTrace();
         }
     }
 
-    public static void put(RocksDB db, int recordCount) throws RocksDBException {
+    public static void put(RocksDB db, int recordCount, int batch) throws RocksDBException {
         StringBuilder valueSB = new StringBuilder();
+        long start = System.currentTimeMillis() / 1000;
         for (int i = 0; i < 100; i++) {
-            valueSB.append("http_log-");
-            valueSB.append(System.currentTimeMillis() / 1000);
-            valueSB.append("-");
+            if (i == 0) {
+                valueSB.append(start);
+            } else {
+                valueSB.append(System.currentTimeMillis() / 1000 - start);
+            }
+            valueSB.append(",");
             valueSB.append(RandomStringUtils.get(5));
+            if (i <= 99) {
+                valueSB.append(",");
+            }
         }
+
         int count = 0;
         StringBuilder keySB = new StringBuilder();
+        WriteOptions writeOptions = new WriteOptions();
+        writeOptions.setDisableWAL(true);
+        writeOptions.setSync(false);
         for (int i = 0; i < recordCount; i++) {
             String keyStr = String.valueOf(RandomStringUtils.get(i % 50 + 5));
             keySB.append(keyStr + "\n");
             byte[] key = keyStr.getBytes();
             byte[] value = valueSB.toString().getBytes();
-            db.put(key, value);
-            if (count % 100000 == 0 && count != 0) {
+            db.put(writeOptions, key, value);
+            if (count % batch == 0 && count != 0) {
                 System.out.println("已经写入记录：" + count);
                 FileUtils.write(KEY_DIR, keySB.toString());
                 keySB = new StringBuilder();
@@ -62,6 +75,30 @@ public class RocksDBDemo {
             count++;
         }
     }
+//    public static void put(RocksDB db, int recordCount) throws RocksDBException {
+//        StringBuilder valueSB = new StringBuilder();
+//        for (int i = 0; i < 100; i++) {
+//            valueSB.append("http_log-");
+//            valueSB.append(System.currentTimeMillis() / 1000);
+//            valueSB.append("-");
+//            valueSB.append(RandomStringUtils.get(5));
+//        }
+//        int count = 0;
+//        StringBuilder keySB = new StringBuilder();
+//        for (int i = 0; i < recordCount; i++) {
+//            String keyStr = String.valueOf(RandomStringUtils.get(i % 50 + 5));
+//            keySB.append(keyStr + "\n");
+//            byte[] key = keyStr.getBytes();
+//            byte[] value = valueSB.toString().getBytes();
+//            db.put(key, value);
+//            if (count % 100000 == 0 && count != 0) {
+//                System.out.println("已经写入记录：" + count);
+//                FileUtils.write(KEY_DIR, keySB.toString());
+//                keySB = new StringBuilder();
+//            }
+//            count++;
+//        }
+//    }
 
     public static void get(RocksDB db, int recordCount) throws RocksDBException {
         BufferedReader reader = null;
@@ -76,8 +113,8 @@ public class RocksDBDemo {
                 long start = System.currentTimeMillis();
                 byte[] value = db.get(line.getBytes(StandardCharsets.UTF_8));
                 long end = System.currentTimeMillis();
-                if (null != value & (end - start) > 0) {
-                    System.out.println("耗时" + (end - start) + ", key=" + line + ", value=" + new String(value));
+                if (null != value & (end - start) > 10) {
+                    System.out.println("第【" + count + "】条记录, 耗时" + (end - start) + ", key=" + line + ", value=" + new String(value));
                 }
                 count++;
                 if (count > recordCount) {
