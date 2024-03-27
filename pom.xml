@@ -88,5 +88,12 @@
             <version>1.0.2</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/io.github.fastfilter/fastfilter -->
+        <dependency>
+            <groupId>io.github.fastfilter</groupId>
+            <artifactId>fastfilter</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
     </dependencies>
 </project>
